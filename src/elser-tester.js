@@ -29,7 +29,8 @@ export class ElserTester {
         // Pipeline doesn't exist, we'll create it
       }
 
-      // Create ELSER inference pipeline - using the simpler working format from original project
+      // Create ELSER inference pipeline with correct configuration
+      // Note: .elser-2-elastic is a tech preview model, .elser-2-elasticsearch is standard
       await client.ingest.putPipeline({
         id: pipelineName,
         body: {
@@ -38,10 +39,12 @@ export class ElserTester {
             {
               inference: {
                 model_id: modelId,
-                input_output: {
-                  input_field: 'text_entry',
-                  output_field: 'text_embedding'
-                }
+                input_output: [  // Note: this should be an array
+                  {
+                    input_field: 'text_entry',
+                    output_field: 'text_embedding'
+                  }
+                ]
               }
             }
           ],
@@ -67,15 +70,16 @@ export class ElserTester {
     const startTime = Date.now();
     
     try {
-      // Use sparse_vector query with ELSER (matching the working project)
+      // Use text_expansion query for ELSER v2 (as per Elastic documentation)
       const response = await client.search({
         index: `${INDEX_NAME}-enriched`,
         body: {
           query: {
-            sparse_vector: {
-              field: 'text_embedding',
-              inference_id: modelId,
-              query: query
+            text_expansion: {
+              'text_embedding': {
+                model_id: modelId,
+                model_text: query
+              }
             }
           },
           size: 10,
@@ -272,14 +276,28 @@ export class ElserTester {
       console.log(chalk.blue(`Starting embedding process with model ${modelId}...`));
       const reindexResult = await client.reindex({
         wait_for_completion: true,
+        refresh: true,  // Ensure index is refreshed after reindexing
         body: reindexBody
       });
 
       const duration = Date.now() - startTime;
+      
+      // Check for failures
+      if (reindexResult.failures && reindexResult.failures.length > 0) {
+        console.log(chalk.yellow(`⚠ Some documents failed to embed:`));
+        reindexResult.failures.slice(0, 5).forEach(failure => {
+          console.log(chalk.yellow(`  - ${failure.cause?.reason || failure.cause?.type || 'Unknown error'}`));
+        });
+      }
+      
       console.log(chalk.green(`✓ ELSER embedding completed in ${duration}ms on ${projectType}`));
       console.log(chalk.blue(`  Model used: ${modelId}`));
       console.log(chalk.blue(`  Documents processed: ${reindexResult.total}`));
       console.log(chalk.blue(`  Documents with embeddings: ${reindexResult.created}`));
+      
+      if (reindexResult.created < reindexResult.total) {
+        console.log(chalk.yellow(`  ⚠ Failed to embed: ${reindexResult.total - reindexResult.created} documents`));
+      }
 
       // Try to get document count
       try {
