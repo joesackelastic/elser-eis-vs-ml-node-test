@@ -366,6 +366,7 @@
                             <option value="multithread">Multi-threaded Test</option>
                             <option value="load">Load Test</option>
                             <option value="stress">Stress Test</option>
+                            <option value="enrich">Enrichment Test (ELSER Embeddings)</option>
                         </select>
                     </div>
 
@@ -552,6 +553,29 @@ night</textarea>
                         <div class="form-group">
                             <label for="iterations">Iterations per Query</label>
                             <input type="number" id="iterations" value="5" min="1" max="100">
+                        </div>
+                    `;
+                    break;
+                case 'enrich':
+                    html = `
+                        <div class="form-group">
+                            <label for="documentCount">Documents to Enrich</label>
+                            <input type="number" id="documentCount" value="100" min="10" max="10000">
+                        </div>
+                        <div class="form-group">
+                            <label for="enrichTarget">Target Project</label>
+                            <select id="enrichTarget">
+                                <option value="both">Both Projects</option>
+                                <option value="eis">EIS Only</option>
+                                <option value="mlnode">ML Node Only</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="background: #fff3cd; padding: 10px; border-radius: 5px;">
+                            <small style="color: #856404;">
+                                <strong>Note:</strong> This test will create ELSER sparse embeddings for documents.<br>
+                                First run "Setup Index" to create the base data, then run enrichment.<br>
+                                This enables ELSER-based semantic search on both projects.
+                            </small>
                         </div>
                     `;
                     break;
@@ -782,6 +806,10 @@ night</textarea>
                 case 'benchmark':
                     params.iterations = parseInt(document.getElementById('iterations')?.value || 5);
                     break;
+                case 'enrich':
+                    params.documentCount = parseInt(document.getElementById('documentCount')?.value || 100);
+                    params.enrichTarget = document.getElementById('enrichTarget')?.value || 'both';
+                    break;
                 case 'multithread':
                     params.concurrency = parseInt(document.getElementById('concurrency')?.value || 10);
                     params.totalQueries = parseInt(document.getElementById('totalQueries')?.value || 50);
@@ -816,6 +844,9 @@ night</textarea>
                 `;
                 grid.appendChild(card);
             });
+            
+            // Show the metrics tab content
+            document.getElementById('metricsGrid').style.display = 'grid';
         }
 
         function updateComparison(results) {

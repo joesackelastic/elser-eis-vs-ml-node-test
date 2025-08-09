@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import config from './config.js';
 import { shakespeareData } from './shakespeare-data.js';
+import { generateExtendedShakespeareData } from './shakespeare-extended-data.js';
 
 const INDEX_NAME = 'shakespeare';
 
@@ -85,7 +86,7 @@ async function setupIndex(client, projectName) {
   }
 }
 
-export async function setupShakespeareIndex() {
+export async function setupShakespeareIndex(useExtendedData = false, documentCount = 1000) {
   console.log(chalk.cyan('\n=== Setting up Shakespeare Index ===\n'));
   
   try {
@@ -101,11 +102,48 @@ export async function setupShakespeareIndex() {
     const mlNodeClient = await config.getMlNodeClient();
     await setupIndex(mlNodeClient, 'ML Node project');
     
+    // Add extended data if requested
+    if (useExtendedData) {
+      console.log(chalk.cyan(`\n=== Adding ${documentCount} Extended Shakespeare Documents ===\n`));
+      const extendedData = generateExtendedShakespeareData(documentCount);
+      
+      console.log(chalk.blue('\nAdding to EIS project...'));
+      await addDocuments(eisClient, extendedData, 'EIS project');
+      
+      console.log(chalk.blue('\nAdding to ML Node project...'));
+      await addDocuments(mlNodeClient, extendedData, 'ML Node project');
+    }
+    
     console.log(chalk.green('\n✓ Shakespeare index setup complete on both projects!\n'));
     
   } catch (error) {
     console.error(chalk.red('\nError setting up Shakespeare index:'), error.message);
     process.exit(1);
+  }
+}
+
+async function addDocuments(client, documents, projectName) {
+  const spinner = ora(`Adding ${documents.length} documents to ${projectName}`).start();
+  
+  try {
+    const operations = documents.flatMap(doc => [
+      { index: { _index: INDEX_NAME } },
+      doc
+    ]);
+    
+    const bulkResponse = await client.bulk({ 
+      refresh: true, 
+      operations 
+    });
+    
+    if (bulkResponse.errors) {
+      spinner.warn(`Some documents failed to index on ${projectName}`);
+    } else {
+      spinner.succeed(`Added ${documents.length} documents to ${projectName}`);
+    }
+  } catch (error) {
+    spinner.fail(`Failed to add documents to ${projectName}`);
+    throw error;
   }
 }
 

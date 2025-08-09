@@ -330,6 +330,66 @@ async function runTest(testId, testType, queries, params) {
                 sendOutput(`Load test completed: ${results.stats.totalQueries} queries, ${results.stats.actualQPS} QPS`, 'success');
                 break;
                 
+            case 'enrich':
+                sendOutput(`Starting ELSER enrichment test`, 'info');
+                
+                const enrichTarget = params.enrichTarget || 'both';
+                const documentCount = params.documentCount || 100;
+                
+                tester = new ElserTester();
+                await tester.initialize();
+                
+                const enrichResults = [];
+                
+                if (enrichTarget === 'both' || enrichTarget === 'eis') {
+                    sendOutput(`\nEnriching ${documentCount} documents on EIS with .elser-2-elastic...`, 'info');
+                    const eisResult = await tester.enrichDocuments(true, documentCount);
+                    enrichResults.push(eisResult);
+                    
+                    if (eisResult.success) {
+                        sendOutput(`✓ EIS enrichment completed in ${eisResult.duration}ms`, 'success');
+                        sendOutput(`  Documents processed: ${eisResult.documentsProcessed}`, 'info');
+                    } else {
+                        sendOutput(`✗ EIS enrichment failed: ${eisResult.error}`, 'error');
+                    }
+                }
+                
+                if (enrichTarget === 'both' || enrichTarget === 'mlnode') {
+                    sendOutput(`\nEnriching ${documentCount} documents on ML Node with .elser-2-elasticsearch...`, 'info');
+                    const mlResult = await tester.enrichDocuments(false, documentCount);
+                    enrichResults.push(mlResult);
+                    
+                    if (mlResult.success) {
+                        sendOutput(`✓ ML Node enrichment completed in ${mlResult.duration}ms`, 'success');
+                        sendOutput(`  Documents processed: ${mlResult.documentsProcessed}`, 'info');
+                    } else {
+                        sendOutput(`✗ ML Node enrichment failed: ${mlResult.error}`, 'error');
+                    }
+                }
+                
+                // Send metrics for display
+                const successfulResults = enrichResults.filter(r => r.success);
+                if (successfulResults.length > 0) {
+                    const metrics = {};
+                    successfulResults.forEach(r => {
+                        metrics[`${r.projectType} Time`] = `${r.duration}ms`;
+                        metrics[`${r.projectType} Docs`] = r.documentsProcessed;
+                    });
+                    
+                    if (successfulResults.length === 2) {
+                        const speedup = successfulResults[0].duration < successfulResults[1].duration 
+                            ? (successfulResults[1].duration / successfulResults[0].duration).toFixed(2)
+                            : (successfulResults[0].duration / successfulResults[1].duration).toFixed(2);
+                        metrics['Speedup'] = `${speedup}x`;
+                        metrics['Faster'] = successfulResults[0].duration < successfulResults[1].duration ? 'EIS' : 'ML Node';
+                    }
+                    
+                    broadcast({ type: 'metrics', metrics });
+                }
+                
+                sendOutput(`\nEnrichment test completed. You can now run search tests with ELSER embeddings.`, 'success');
+                break;
+                
             case 'stress':
                 tester = new MultiThreadTester();
                 await tester.initialize();
