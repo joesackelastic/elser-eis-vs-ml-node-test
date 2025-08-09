@@ -405,10 +405,18 @@ async function runEmbeddingTest(testId, params) {
     }
 }
 
+// Serve simple.html as the default page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'simple.html'));
+});
+
 // Start server
 const server = app.listen(PORT, () => {
+    console.log(`\n=== ELSER Embedding Test Server ===`);
     console.log(`Server running at http://localhost:${PORT}`);
-    console.log(`Open your browser to http://localhost:${PORT}/simple.html`);
+    console.log(`Open your browser to http://localhost:${PORT}`);
+    console.log(`\nThis server ONLY tests ELSER document embedding.`);
+    console.log(`No other test types are available.\n`);
 });
 
 // Setup WebSocket server

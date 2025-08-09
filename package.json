@@ -5,12 +5,11 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "test": "node src/index.js --test",
+    "start": "node server-simple.js",
+    "embed": "node server-simple.js",
+    "server-full": "node server.js",
     "setup": "node src/setup-shakespeare.js",
-    "server": "node server.js",
-    "dev": "node server.js",
-    "simple": "node server-simple.js"
+    "cli": "node src/index.js"
   },
   "keywords": [
     "elasticsearch",

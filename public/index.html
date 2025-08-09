@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ELSER EIS vs ML Node Performance Tester</title>
+    <title>ELSER Model Performance Comparison</title>
     <style>
         * {
             margin: 0;
@@ -42,9 +42,23 @@
             font-size: 14px;
         }
 
+        .model-info {
+            background: #f0f8ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .model-info code {
+            background: #e7f3ff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
         .main-grid {
             display: grid;
-            grid-template-columns: 350px 1fr;
+            grid-template-columns: 400px 1fr;
             gap: 20px;
         }
 
@@ -89,35 +103,24 @@
             font-weight: 500;
         }
 
-        input, select, textarea {
+        input, select {
             width: 100%;
             padding: 8px 12px;
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 14px;
-            transition: border-color 0.3s;
         }
 
-        input:focus, select:focus, textarea:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: #667eea;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 60px;
-            font-family: monospace;
-        }
-
-        .credentials-grid {
-            display: grid;
-            gap: 10px;
         }
 
         .credential-group {
             padding: 10px;
             background: #f8f9fa;
             border-radius: 5px;
+            margin-bottom: 10px;
         }
 
         .credential-group h4 {
@@ -136,6 +139,8 @@
             font-size: 14px;
             font-weight: 600;
             transition: transform 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
         }
 
         button:hover {
@@ -148,17 +153,6 @@
             transform: none;
         }
 
-        .button-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .button-group button {
-            width: 100%;
-        }
-
         .stop-button {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
@@ -168,29 +162,9 @@
             background: #f8f9fa;
             border-radius: 5px;
             margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-idle { background: #6c757d; }
-        .status-running { background: #28a745; animation: pulse 1s infinite; }
-        .status-error { background: #dc3545; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        #results {
+        #console {
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 13px;
             line-height: 1.5;
@@ -204,50 +178,18 @@
             white-space: pre-wrap;
         }
 
-        .result-entry {
-            margin-bottom: 10px;
-            padding: 5px;
+        .console-entry {
+            margin-bottom: 5px;
         }
 
-        .result-success { color: #4ec9b0; }
-        .result-error { color: #f48771; }
-        .result-info { color: #9cdcfe; }
-        .result-warning { color: #dcdcaa; }
-
-        .tabs {
-            display: flex;
-            border-bottom: 2px solid #f0f0f0;
-            margin-bottom: 20px;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            background: none;
-            border: none;
-            color: #666;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .tab.active {
-            color: #667eea;
-            border-bottom: 2px solid #667eea;
-            margin-bottom: -2px;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
+        .console-success { color: #4ec9b0; }
+        .console-error { color: #f48771; }
+        .console-info { color: #9cdcfe; }
+        .console-warning { color: #dcdcaa; }
 
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -271,162 +213,134 @@
             margin-top: 5px;
         }
 
-        .chart-container {
-            background: white;
-            padding: 15px;
+        .model-verification {
+            background: #e7f3ff;
+            padding: 10px;
             border-radius: 5px;
-            margin-top: 20px;
+            margin-top: 10px;
+            font-size: 13px;
         }
 
-        .progress-bar {
-            width: 100%;
-            height: 20px;
+        .model-verification .verified {
+            color: #28a745;
+        }
+
+        .model-verification .not-verified {
+            color: #dc3545;
+        }
+
+        .progress-info {
+            margin-top: 10px;
+            padding: 10px;
             background: #f0f0f0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.3s;
-        }
-
-        .connection-status {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .connection-badge {
-            flex: 1;
-            padding: 5px;
             border-radius: 5px;
-            text-align: center;
-            font-size: 12px;
-        }
-
-        .connection-badge.connected {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .connection-badge.disconnected {
-            background: #f8d7da;
-            color: #721c24;
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>ELSER Performance Comparison Tool</h1>
-            <div class="subtitle">Compare .elser-2-elastic (EIS) vs .elser-2-elasticsearch (ML Node) on serverless projects</div>
+            <h1>ELSER Model Performance Comparison</h1>
+            <div class="subtitle">Compare document embedding performance between .elser-2-elastic (EIS) and .elser-2-elasticsearch (ML Node)</div>
+            <div class="model-info">
+                <strong>Models being compared:</strong><br>
+                • EIS Optimized: <code>.elser-2-elastic</code> - Elastic Inference Service optimized ELSER<br>
+                • ML Node Standard: <code>.elser-2-elasticsearch</code> - Standard ML node ELSER
+            </div>
         </header>
 
         <div class="main-grid">
             <div class="config-panel">
                 <div class="section">
-                    <div class="section-title">Serverless Projects Configuration</div>
-                    <div class="credentials-grid">
-                        <div class="credential-group">
-                            <h4>EIS Project (.elser-2-elastic)</h4>
-                            <div class="form-group">
-                                <input type="url" id="eisUrl" placeholder="https://your-eis-project.es.us-east-1.aws.elastic.cloud">
-                            </div>
-                            <div class="form-group">
-                                <input type="password" id="eisApiKey" placeholder="API Key">
-                            </div>
+                    <div class="section-title">Serverless Project Configuration</div>
+                    
+                    <div class="credential-group">
+                        <h4>EIS Project (.elser-2-elastic)</h4>
+                        <div class="form-group">
+                            <input type="url" id="eisUrl" placeholder="https://your-eis-project.es.aws.elastic.cloud">
                         </div>
-                        <div class="credential-group">
-                            <h4>ML Node Project (.elser-2-elasticsearch)</h4>
-                            <div class="form-group">
-                                <input type="url" id="mlNodeUrl" placeholder="https://your-ml-node-project.es.us-east-1.aws.elastic.cloud">
-                            </div>
-                            <div class="form-group">
-                                <input type="password" id="mlNodeApiKey" placeholder="API Key">
-                            </div>
+                        <div class="form-group">
+                            <input type="password" id="eisApiKey" placeholder="API Key">
                         </div>
                     </div>
-                    <button onclick="testConnections()" style="width: 100%; margin-top: 10px;">Test Connections</button>
-                    <div class="connection-status">
-                        <div class="connection-badge disconnected" id="eisStatus">EIS: Not Tested</div>
-                        <div class="connection-badge disconnected" id="mlNodeStatus">ML Node: Not Tested</div>
+                    
+                    <div class="credential-group">
+                        <h4>ML Node Project (.elser-2-elasticsearch)</h4>
+                        <div class="form-group">
+                            <input type="url" id="mlNodeUrl" placeholder="https://your-ml-node-project.es.aws.elastic.cloud">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" id="mlNodeApiKey" placeholder="API Key">
+                        </div>
+                    </div>
+
+                    <button onclick="testConnections()">Test Connections</button>
+                    <button onclick="verifyModels()">Verify ELSER Models</button>
+                    
+                    <div id="modelVerification" class="model-verification" style="display: none;">
+                        <div id="eisModelStatus"></div>
+                        <div id="mlNodeModelStatus"></div>
                     </div>
                 </div>
 
                 <div class="section">
-                    <div class="section-title">Test Configuration</div>
+                    <div class="section-title">ELSER Embedding Test Configuration</div>
+                    
                     <div class="form-group">
-                        <label for="testType">Test Type</label>
-                        <select id="testType">
-                            <option value="compare">Single Comparison</option>
-                            <option value="benchmark">Benchmark</option>
-                            <option value="multithread">Multi-threaded Test</option>
-                            <option value="load">Load Test</option>
-                            <option value="stress">Stress Test</option>
-                            <option value="embed">ELSER Embedding Test</option>
+                        <label for="documentCount">Number of Documents to Embed</label>
+                        <input type="number" id="documentCount" value="100" min="10" max="10000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="batchSize">Batch Size</label>
+                        <input type="number" id="batchSize" value="100" min="10" max="1000">
+                        <small style="color: #666;">Documents per batch for embedding</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="threads">Concurrent Operations</label>
+                        <input type="number" id="threads" value="1" min="1" max="10">
+                        <small style="color: #666;">Number of parallel batch operations</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="target">Target Projects</label>
+                        <select id="target">
+                            <option value="both">Both Projects (Compare)</option>
+                            <option value="eis">EIS Only</option>
+                            <option value="mlnode">ML Node Only</option>
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="queries">Search Queries (one per line)</label>
-                        <textarea id="queries" placeholder="love&#10;death&#10;king&#10;sword&#10;night">love
-death
-king
-sword
-night</textarea>
-                    </div>
-
-                    <div id="testParams">
-                        <!-- Dynamic parameters based on test type -->
-                    </div>
+                    <button onclick="setupIndex()">Setup Shakespeare Index</button>
+                    <button onclick="startEmbedding()" id="startBtn">Start ELSER Embedding Test</button>
+                    <button onclick="stopTest()" id="stopBtn" class="stop-button" disabled>Stop Test</button>
+                    <button onclick="clearConsole()">Clear Console</button>
                 </div>
 
-                <div class="button-group">
-                    <button id="setupBtn" onclick="setupIndex()">Setup Index</button>
-                    <button id="startBtn" onclick="startTest()">Start Test</button>
-                </div>
-                <div class="button-group">
-                    <button id="stopBtn" onclick="stopTest()" disabled class="stop-button">Stop Test</button>
-                    <button id="clearBtn" onclick="clearResults()">Clear Results</button>
+                <div class="section">
+                    <div class="section-title">Test Information</div>
+                    <div style="font-size: 13px; color: #666; line-height: 1.6;">
+                        <strong>What this test does:</strong><br>
+                        1. Creates/uses Shakespeare index<br>
+                        2. Generates ELSER sparse embeddings<br>
+                        3. Compares embedding speed between models<br>
+                        4. Shows performance metrics<br><br>
+                        <strong>Thread control:</strong> Increase threads to test parallel embedding performance
+                    </div>
                 </div>
             </div>
 
             <div class="results-panel">
                 <div class="status-bar">
-                    <div>
-                        <span class="status-indicator status-idle" id="statusIndicator"></span>
-                        <span id="statusText">Idle</span>
-                    </div>
-                    <div id="testProgress"></div>
+                    <strong>Status:</strong> <span id="status">Ready</span>
+                    <div id="progressInfo" class="progress-info" style="display: none;"></div>
                 </div>
 
-                <div class="tabs">
-                    <button class="tab active" onclick="switchTab('console')">Console Output</button>
-                    <button class="tab" onclick="switchTab('metrics')">Metrics</button>
-                    <button class="tab" onclick="switchTab('comparison')">Comparison</button>
-                </div>
+                <div class="metrics-grid" id="metrics" style="display: none;"></div>
 
-                <div class="tab-content active" id="console-tab">
-                    <div id="results"></div>
-                </div>
-
-                <div class="tab-content" id="metrics-tab">
-                    <div class="metrics-grid" id="metricsGrid">
-                        <!-- Metrics will be populated here -->
-                    </div>
-                    <div class="chart-container" id="chartContainer" style="display: none;">
-                        <!-- Chart will be rendered here -->
-                    </div>
-                </div>
-
-                <div class="tab-content" id="comparison-tab">
-                    <div id="comparisonResults">
-                        <p style="color: #666; text-align: center; margin-top: 50px;">Run a test to see comparison results</p>
-                    </div>
-                </div>
+                <div id="console"></div>
             </div>
         </div>
     </div>
@@ -435,14 +349,14 @@ night</textarea>
         let ws = null;
         let currentTest = null;
 
-        // Initialize WebSocket connection
+        // Initialize WebSocket
         function initWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             ws = new WebSocket(`${protocol}//${window.location.host}`);
 
             ws.onopen = () => {
-                console.log('WebSocket connected');
-                updateStatus('idle', 'Connected');
+                log('Connected to server', 'info');
+                updateStatus('Connected');
             };
 
             ws.onmessage = (event) => {
@@ -451,270 +365,72 @@ night</textarea>
             };
 
             ws.onclose = () => {
-                console.log('WebSocket disconnected');
-                updateStatus('error', 'Disconnected');
+                log('Disconnected from server', 'warning');
+                updateStatus('Disconnected');
                 setTimeout(initWebSocket, 3000);
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
             };
         }
 
         function handleMessage(data) {
             switch (data.type) {
                 case 'output':
-                    appendResult(data.message, data.level || 'info');
-                    break;
-                case 'status':
-                    updateStatus(data.status, data.message);
-                    break;
-                case 'progress':
-                    updateProgress(data.current, data.total);
+                    log(data.message, data.level || 'info');
                     break;
                 case 'metrics':
-                    updateMetrics(data.metrics);
+                    displayMetrics(data.metrics);
                     break;
-                case 'comparison':
-                    updateComparison(data.results);
-                    break;
-                case 'error':
-                    appendResult(`Error: ${data.message}`, 'error');
-                    updateStatus('error', 'Error occurred');
+                case 'progress':
+                    updateProgress(data);
                     break;
                 case 'complete':
-                    updateStatus('idle', 'Test completed');
+                    updateStatus('Test completed');
                     document.getElementById('startBtn').disabled = false;
                     document.getElementById('stopBtn').disabled = true;
                     break;
             }
         }
 
-        function updateStatus(status, message) {
-            const indicator = document.getElementById('statusIndicator');
-            const text = document.getElementById('statusText');
-            
-            indicator.className = `status-indicator status-${status}`;
-            text.textContent = message;
-        }
-
-        function updateProgress(current, total) {
-            const progressDiv = document.getElementById('testProgress');
-            if (total > 0) {
-                progressDiv.innerHTML = `
-                    <div style="text-align: right;">
-                        ${current} / ${total} queries
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${(current/total)*100}%"></div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        function appendResult(message, level = 'info') {
-            const results = document.getElementById('results');
+        function log(message, level = 'info') {
+            const console = document.getElementById('console');
             const entry = document.createElement('div');
-            entry.className = `result-entry result-${level}`;
+            entry.className = `console-entry console-${level}`;
             entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            results.appendChild(entry);
-            results.scrollTop = results.scrollHeight;
+            console.appendChild(entry);
+            console.scrollTop = console.scrollHeight;
         }
 
-        function clearResults() {
-            document.getElementById('results').innerHTML = '';
-            document.getElementById('metricsGrid').innerHTML = '';
-            document.getElementById('comparisonResults').innerHTML = '<p style="color: #666; text-align: center; margin-top: 50px;">Run a test to see comparison results</p>';
+        function updateStatus(status) {
+            document.getElementById('status').textContent = status;
         }
 
-        function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
+        function updateProgress(data) {
+            const info = document.getElementById('progressInfo');
+            info.style.display = 'block';
+            info.innerHTML = `
+                <strong>Progress:</strong><br>
+                Documents processed: ${data.processed || 0} / ${data.total || 0}<br>
+                Current operation: ${data.operation || 'Processing...'}
+            `;
+        }
+
+        function displayMetrics(metrics) {
+            const container = document.getElementById('metrics');
+            container.style.display = 'grid';
+            container.innerHTML = '';
+            
+            Object.entries(metrics).forEach(([key, value]) => {
+                const card = document.createElement('div');
+                card.className = 'metric-card';
+                card.innerHTML = `
+                    <div class="metric-value">${value}</div>
+                    <div class="metric-label">${key}</div>
+                `;
+                container.appendChild(card);
             });
-            event.target.classList.add('active');
-
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-        }
-
-        // Update test parameters based on selected test type
-        document.getElementById('testType').addEventListener('change', (e) => {
-            const testType = e.target.value;
-            const paramsDiv = document.getElementById('testParams');
-            
-            let html = '';
-            switch (testType) {
-                case 'benchmark':
-                    html = `
-                        <div class="form-group">
-                            <label for="iterations">Iterations per Query</label>
-                            <input type="number" id="iterations" value="5" min="1" max="100">
-                        </div>
-                    `;
-                    break;
-                case 'embed':
-                    html = `
-                        <div class="form-group">
-                            <label for="documentCount">Documents to Embed</label>
-                            <input type="number" id="documentCount" value="100" min="10" max="10000">
-                        </div>
-                        <div class="form-group">
-                            <label for="embedTarget">Target Project</label>
-                            <select id="embedTarget">
-                                <option value="both">Both Projects</option>
-                                <option value="eis">EIS Only</option>
-                                <option value="mlnode">ML Node Only</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <button onclick="verifyModels()" style="width: 100%;">Verify ELSER Models</button>
-                        </div>
-                        <div id="modelStatus" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; display: none;">
-                            <div id="eisModelInfo" style="margin-bottom: 5px;"></div>
-                            <div id="mlNodeModelInfo"></div>
-                        </div>
-                        <div class="form-group" style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 10px;">
-                            <small style="color: #004085;">
-                                <strong>ELSER Embedding Test:</strong><br>
-                                • EIS Model: <code>.elser-2-elastic</code><br>
-                                • ML Node Model: <code>.elser-2-elasticsearch</code><br>
-                                • Creates sparse vector embeddings for semantic search<br>
-                                • Compares embedding generation speed between models
-                            </small>
-                        </div>
-                    `;
-                    break;
-                case 'multithread':
-                    html = `
-                        <div class="form-group">
-                            <label for="concurrency">Concurrent Threads</label>
-                            <input type="number" id="concurrency" value="10" min="1" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label for="totalQueries">Total Queries</label>
-                            <input type="number" id="totalQueries" value="50" min="1" max="1000">
-                        </div>
-                    `;
-                    break;
-                case 'load':
-                    html = `
-                        <div class="form-group">
-                            <label for="duration">Duration (seconds)</label>
-                            <input type="number" id="duration" value="30" min="5" max="600">
-                        </div>
-                        <div class="form-group">
-                            <label for="concurrency">Concurrent Threads</label>
-                            <input type="number" id="concurrency" value="10" min="1" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label for="targetQps">Target QPS (optional)</label>
-                            <input type="number" id="targetQps" placeholder="Leave empty for maximum" min="1">
-                        </div>
-                    `;
-                    break;
-                case 'stress':
-                    html = `
-                        <div class="form-group">
-                            <label for="startConcurrency">Starting Threads</label>
-                            <input type="number" id="startConcurrency" value="5" min="1" max="50">
-                        </div>
-                        <div class="form-group">
-                            <label for="maxConcurrency">Maximum Threads</label>
-                            <input type="number" id="maxConcurrency" value="50" min="10" max="200">
-                        </div>
-                        <div class="form-group">
-                            <label for="stepSize">Step Increment</label>
-                            <input type="number" id="stepSize" value="5" min="1" max="20">
-                        </div>
-                        <div class="form-group">
-                            <label for="stepDuration">Step Duration (seconds)</label>
-                            <input type="number" id="stepDuration" value="10" min="5" max="60">
-                        </div>
-                    `;
-                    break;
-            }
-            paramsDiv.innerHTML = html;
-        });
-
-        async function verifyModels() {
-            if (!validateCredentials()) {
-                alert('Please enter all credentials first');
-                return;
-            }
-
-            const statusDiv = document.getElementById('modelStatus');
-            const eisInfo = document.getElementById('eisModelInfo');
-            const mlNodeInfo = document.getElementById('mlNodeModelInfo');
-            
-            statusDiv.style.display = 'block';
-            eisInfo.innerHTML = '<span style="color: #666;">Checking EIS model...</span>';
-            mlNodeInfo.innerHTML = '<span style="color: #666;">Checking ML Node model...</span>';
-            
-            try {
-                const response = await fetch('/api/verify-models', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(getCredentials())
-                });
-                
-                const result = await response.json();
-                
-                // Display EIS model info
-                if (result.eisModel.available) {
-                    eisInfo.innerHTML = `
-                        <strong style="color: #28a745;">✓ EIS Model:</strong> 
-                        <code>${result.eisModel.modelId}</code> 
-                        <span style="color: #666;">(${result.eisModel.version || 'deployed'})</span>
-                    `;
-                    appendResult(`EIS ELSER model confirmed: ${result.eisModel.modelId}`, 'success');
-                } else {
-                    eisInfo.innerHTML = `
-                        <strong style="color: #dc3545;">✗ EIS Model:</strong> 
-                        <span>${result.eisModel.error || 'Not available'}</span>
-                    `;
-                    appendResult(`EIS ELSER model issue: ${result.eisModel.error}`, 'warning');
-                }
-                
-                // Display ML Node model info
-                if (result.mlNodeModel.available) {
-                    mlNodeInfo.innerHTML = `
-                        <strong style="color: #28a745;">✓ ML Node Model:</strong> 
-                        <code>${result.mlNodeModel.modelId}</code> 
-                        <span style="color: #666;">(${result.mlNodeModel.version || 'deployed'})</span>
-                    `;
-                    appendResult(`ML Node ELSER model confirmed: ${result.mlNodeModel.modelId}`, 'success');
-                } else {
-                    mlNodeInfo.innerHTML = `
-                        <strong style="color: #dc3545;">✗ ML Node Model:</strong> 
-                        <span>${result.mlNodeModel.error || 'Not available'}</span>
-                    `;
-                    appendResult(`ML Node ELSER model issue: ${result.mlNodeModel.error}`, 'warning');
-                }
-                
-            } catch (error) {
-                eisInfo.innerHTML = '<span style="color: #dc3545;">Error checking models</span>';
-                mlNodeInfo.innerHTML = '';
-                appendResult(`Model verification error: ${error.message}`, 'error');
-            }
         }
 
         async function testConnections() {
-            if (!validateCredentials()) {
-                alert('Please enter all credentials');
-                return;
-            }
-
-            const eisStatus = document.getElementById('eisStatus');
-            const mlNodeStatus = document.getElementById('mlNodeStatus');
-            
-            eisStatus.textContent = 'EIS: Testing...';
-            eisStatus.className = 'connection-badge disconnected';
-            mlNodeStatus.textContent = 'ML Node: Testing...';
-            mlNodeStatus.className = 'connection-badge disconnected';
+            log('Testing connections...', 'info');
             
             try {
                 const response = await fetch('/api/test-connection', {
@@ -725,45 +441,62 @@ night</textarea>
                 
                 const result = await response.json();
                 
-                // Update EIS status
                 if (result.eisConnection.success) {
-                    eisStatus.textContent = 'EIS: Connected';
-                    eisStatus.className = 'connection-badge connected';
-                    appendResult(`EIS connection successful (${result.eisConnection.cluster})`, 'success');
+                    log(`EIS connection successful: ${result.eisConnection.cluster}`, 'success');
                 } else {
-                    eisStatus.textContent = 'EIS: Failed';
-                    eisStatus.className = 'connection-badge disconnected';
-                    appendResult(`EIS connection failed: ${result.eisConnection.error}`, 'error');
+                    log(`EIS connection failed: ${result.eisConnection.error}`, 'error');
                 }
                 
-                // Update ML Node status
                 if (result.mlNodeConnection.success) {
-                    mlNodeStatus.textContent = 'ML Node: Connected';
-                    mlNodeStatus.className = 'connection-badge connected';
-                    appendResult(`ML Node connection successful (${result.mlNodeConnection.cluster})`, 'success');
+                    log(`ML Node connection successful: ${result.mlNodeConnection.cluster}`, 'success');
                 } else {
-                    mlNodeStatus.textContent = 'ML Node: Failed';
-                    mlNodeStatus.className = 'connection-badge disconnected';
-                    appendResult(`ML Node connection failed: ${result.mlNodeConnection.error}`, 'error');
+                    log(`ML Node connection failed: ${result.mlNodeConnection.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Connection test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function verifyModels() {
+            log('Verifying ELSER models...', 'info');
+            const verDiv = document.getElementById('modelVerification');
+            verDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/verify-models', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(getCredentials())
+                });
+                
+                const result = await response.json();
+                
+                // Display EIS model status
+                const eisStatus = document.getElementById('eisModelStatus');
+                if (result.eisModel.available) {
+                    eisStatus.innerHTML = '<span class="verified">✓ EIS: .elser-2-elastic available</span>';
+                    log(`EIS model verified: .elser-2-elastic`, 'success');
+                } else {
+                    eisStatus.innerHTML = '<span class="not-verified">✗ EIS: .elser-2-elastic not available</span>';
+                    log(`EIS model issue: ${result.eisModel.error}`, 'error');
                 }
                 
+                // Display ML Node model status
+                const mlStatus = document.getElementById('mlNodeModelStatus');
+                if (result.mlNodeModel.available) {
+                    mlStatus.innerHTML = '<span class="verified">✓ ML Node: .elser-2-elasticsearch available</span>';
+                    log(`ML Node model verified: .elser-2-elasticsearch`, 'success');
+                } else {
+                    mlStatus.innerHTML = '<span class="not-verified">✗ ML Node: .elser-2-elasticsearch not available</span>';
+                    log(`ML Node model issue: ${result.mlNodeModel.error}`, 'error');
+                }
             } catch (error) {
-                eisStatus.textContent = 'EIS: Error';
-                mlNodeStatus.textContent = 'ML Node: Error';
-                appendResult(`Connection test error: ${error.message}`, 'error');
+                log(`Model verification error: ${error.message}`, 'error');
             }
         }
 
         async function setupIndex() {
-            if (!validateCredentials()) {
-                alert('Please enter all credentials');
-                return;
-            }
-
-            const btn = document.getElementById('setupBtn');
-            btn.disabled = true;
-            
-            appendResult('Setting up Shakespeare index on both projects...', 'info');
+            log('Setting up Shakespeare index...', 'info');
             
             try {
                 const response = await fetch('/api/setup', {
@@ -774,46 +507,43 @@ night</textarea>
                 
                 const result = await response.json();
                 if (result.success) {
-                    appendResult('Index setup completed successfully!', 'success');
+                    log('Shakespeare index setup completed', 'success');
                 } else {
-                    appendResult(`Setup failed: ${result.error}`, 'error');
+                    log(`Setup failed: ${result.error}`, 'error');
                 }
             } catch (error) {
-                appendResult(`Setup error: ${error.message}`, 'error');
-            } finally {
-                btn.disabled = false;
+                log(`Setup error: ${error.message}`, 'error');
             }
         }
 
-        async function startTest() {
-            if (!validateCredentials()) {
+        async function startEmbedding() {
+            const credentials = getCredentials();
+            if (!credentials.eisProject.url || !credentials.eisProject.apiKey ||
+                !credentials.mlNodeProject.url || !credentials.mlNodeProject.apiKey) {
                 alert('Please enter all credentials');
                 return;
             }
 
-            const testType = document.getElementById('testType').value;
-            const queries = document.getElementById('queries').value.split('\n').filter(q => q.trim());
-            
-            if (queries.length === 0) {
-                alert('Please enter at least one query');
-                return;
-            }
-
-            const config = {
-                ...getCredentials(),
-                testType,
-                queries,
-                ...getTestParams(testType)
-            };
-
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
+            document.getElementById('metrics').style.display = 'none';
+            document.getElementById('progressInfo').style.display = 'none';
             
-            clearResults();
-            updateStatus('running', 'Starting test...');
+            updateStatus('Starting ELSER embedding test...');
+            
+            const config = {
+                ...credentials,
+                documentCount: parseInt(document.getElementById('documentCount').value),
+                batchSize: parseInt(document.getElementById('batchSize').value),
+                threads: parseInt(document.getElementById('threads').value),
+                target: document.getElementById('target').value
+            };
+
+            log(`Starting ELSER embedding test with ${config.documentCount} documents using ${config.threads} threads`, 'info');
+            log(`Models: .elser-2-elastic (EIS) vs .elser-2-elasticsearch (ML Node)`, 'info');
             
             try {
-                const response = await fetch('/api/test', {
+                const response = await fetch('/api/embed-test', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
@@ -824,12 +554,11 @@ night</textarea>
                 }
                 
                 currentTest = await response.json();
-                appendResult(`Test started: ${currentTest.id}`, 'success');
+                log(`Test started: ${currentTest.id}`, 'success');
             } catch (error) {
-                appendResult(`Failed to start test: ${error.message}`, 'error');
+                log(`Failed to start test: ${error.message}`, 'error');
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').disabled = true;
-                updateStatus('error', 'Failed to start');
             }
         }
 
@@ -838,121 +567,34 @@ night</textarea>
             
             try {
                 await fetch(`/api/test/${currentTest.id}/stop`, { method: 'POST' });
-                appendResult('Test stopped', 'warning');
-                updateStatus('idle', 'Test stopped');
+                log('Test stopped', 'warning');
+                updateStatus('Test stopped');
             } catch (error) {
-                appendResult(`Failed to stop test: ${error.message}`, 'error');
-            } finally {
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('stopBtn').disabled = true;
+                log(`Failed to stop test: ${error.message}`, 'error');
             }
         }
 
-        function validateCredentials() {
-            return document.getElementById('eisUrl').value &&
-                   document.getElementById('eisApiKey').value &&
-                   document.getElementById('mlNodeUrl').value &&
-                   document.getElementById('mlNodeApiKey').value;
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '';
+            document.getElementById('metrics').style.display = 'none';
+            document.getElementById('progressInfo').style.display = 'none';
         }
 
         function getCredentials() {
             return {
                 eisProject: {
                     url: document.getElementById('eisUrl').value,
-                    apiKey: document.getElementById('eisApiKey').value,
-                    modelId: '.elser-2-elastic'
+                    apiKey: document.getElementById('eisApiKey').value
                 },
                 mlNodeProject: {
                     url: document.getElementById('mlNodeUrl').value,
-                    apiKey: document.getElementById('mlNodeApiKey').value,
-                    modelId: '.elser-2-elasticsearch'
+                    apiKey: document.getElementById('mlNodeApiKey').value
                 }
             };
         }
 
-        function getTestParams(testType) {
-            const params = {};
-            
-            switch (testType) {
-                case 'benchmark':
-                    params.iterations = parseInt(document.getElementById('iterations')?.value || 5);
-                    break;
-                case 'embed':
-                    params.documentCount = parseInt(document.getElementById('documentCount')?.value || 100);
-                    params.embedTarget = document.getElementById('embedTarget')?.value || 'both';
-                    break;
-                case 'multithread':
-                    params.concurrency = parseInt(document.getElementById('concurrency')?.value || 10);
-                    params.totalQueries = parseInt(document.getElementById('totalQueries')?.value || 50);
-                    break;
-                case 'load':
-                    params.duration = parseInt(document.getElementById('duration')?.value || 30);
-                    params.concurrency = parseInt(document.getElementById('concurrency')?.value || 10);
-                    const targetQps = document.getElementById('targetQps')?.value;
-                    if (targetQps) params.targetQps = parseInt(targetQps);
-                    break;
-                case 'stress':
-                    params.startConcurrency = parseInt(document.getElementById('startConcurrency')?.value || 5);
-                    params.maxConcurrency = parseInt(document.getElementById('maxConcurrency')?.value || 50);
-                    params.stepSize = parseInt(document.getElementById('stepSize')?.value || 5);
-                    params.stepDuration = parseInt(document.getElementById('stepDuration')?.value || 10);
-                    break;
-            }
-            
-            return params;
-        }
-
-        function updateMetrics(metrics) {
-            const grid = document.getElementById('metricsGrid');
-            grid.innerHTML = '';
-            
-            Object.entries(metrics).forEach(([key, value]) => {
-                const card = document.createElement('div');
-                card.className = 'metric-card';
-                card.innerHTML = `
-                    <div class="metric-value">${value}</div>
-                    <div class="metric-label">${key}</div>
-                `;
-                grid.appendChild(card);
-            });
-            
-            // Show the metrics tab content
-            document.getElementById('metricsGrid').style.display = 'grid';
-        }
-
-        function updateComparison(results) {
-            const container = document.getElementById('comparisonResults');
-            
-            let html = '<table style="width: 100%; border-collapse: collapse;">';
-            html += '<thead><tr style="background: #f8f9fa;">';
-            html += '<th style="padding: 10px; text-align: left;">Query</th>';
-            html += '<th style="padding: 10px;">EIS (ms)</th>';
-            html += '<th style="padding: 10px;">ML Node (ms)</th>';
-            html += '<th style="padding: 10px;">Faster</th>';
-            html += '<th style="padding: 10px;">Speedup</th>';
-            html += '</tr></thead><tbody>';
-            
-            results.forEach(result => {
-                const faster = result.eisTime < result.mlNodeTime ? 'EIS' : 'ML Node';
-                const speedup = result.eisTime < result.mlNodeTime 
-                    ? (result.mlNodeTime / result.eisTime).toFixed(2)
-                    : (result.eisTime / result.mlNodeTime).toFixed(2);
-                
-                html += '<tr>';
-                html += `<td style="padding: 10px;">${result.query}</td>`;
-                html += `<td style="padding: 10px; text-align: center;">${result.eisTime}</td>`;
-                html += `<td style="padding: 10px; text-align: center;">${result.mlNodeTime}</td>`;
-                html += `<td style="padding: 10px; text-align: center; color: ${faster === 'EIS' ? '#667eea' : '#28a745'}">${faster}</td>`;
-                html += `<td style="padding: 10px; text-align: center; font-weight: bold;">${speedup}x</td>`;
-                html += '</tr>';
-            });
-            
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        // Load saved credentials from local cache (never from version control)
-        async function loadSavedCredentials() {
+        // Load saved credentials from local cache
+        async function loadCredentials() {
             try {
                 const response = await fetch('/api/credentials');
                 if (response.ok) {
@@ -965,17 +607,19 @@ night</textarea>
                         document.getElementById('mlNodeUrl').value = creds.mlNodeProject.url || '';
                         document.getElementById('mlNodeApiKey').value = creds.mlNodeProject.apiKey || '';
                     }
+                    if (creds.eisProject.apiKey && creds.mlNodeProject.apiKey) {
+                        log('Credentials loaded from local cache', 'info');
+                    }
                 }
             } catch (error) {
                 console.error('Failed to load credentials:', error);
             }
         }
 
-        // Initialize on page load
+        // Initialize
         window.addEventListener('DOMContentLoaded', () => {
             initWebSocket();
-            loadSavedCredentials();
-            document.getElementById('testType').dispatchEvent(new Event('change'));
+            loadCredentials();
         });
     </script>
 </body>
