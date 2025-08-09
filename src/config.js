@@ -101,8 +101,8 @@ export class Config {
     return this.credentials;
   }
 
-  getEisClient() {
-    const { Client } = require('@elastic/elasticsearch');
+  async getEisClient() {
+    const { Client } = await import('@elastic/elasticsearch');
     const creds = this.credentials.eisProject;
     
     if (!creds) {
@@ -117,8 +117,8 @@ export class Config {
     });
   }
 
-  getMlNodeClient() {
-    const { Client } = require('@elastic/elasticsearch');
+  async getMlNodeClient() {
+    const { Client } = await import('@elastic/elasticsearch');
     const creds = this.credentials.mlNodeProject;
     
     if (!creds) {

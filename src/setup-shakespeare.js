@@ -85,12 +85,12 @@ export async function setupShakespeareIndex() {
     
     // Setup on EIS project
     console.log(chalk.blue('\nSetting up on .elser-2-elastic (EIS) project...'));
-    const eisClient = config.getEisClient();
+    const eisClient = await config.getEisClient();
     await setupIndex(eisClient, 'EIS project');
     
     // Setup on ML Node project
     console.log(chalk.blue('\nSetting up on .elser-2-elasticsearch (ML Node) project...'));
-    const mlNodeClient = config.getMlNodeClient();
+    const mlNodeClient = await config.getMlNodeClient();
     await setupIndex(mlNodeClient, 'ML Node project');
     
     console.log(chalk.green('\n✓ Shakespeare index setup complete on both projects!\n'));

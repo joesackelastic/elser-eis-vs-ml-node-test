@@ -14,8 +14,8 @@ export class ElserTester {
 
   async initialize() {
     await config.getCredentials();
-    this.eisClient = config.getEisClient();
-    this.mlNodeClient = config.getMlNodeClient();
+    this.eisClient = await config.getEisClient();
+    this.mlNodeClient = await config.getMlNodeClient();
   }
 
   async ensureInferencePipeline(client, pipelineName, modelId) {
