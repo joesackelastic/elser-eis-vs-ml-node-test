@@ -49,18 +49,21 @@ function sendOutput(message, level = 'info') {
 
 // API Routes
 
-// Get saved credentials (without sensitive data)
+// Get saved credentials (from local cache only, never from version control)
 app.get('/api/credentials', async (req, res) => {
     try {
         const creds = config.credentials;
-        // Return URLs only, not API keys
+        // Return full credentials from local cache
+        // These are stored in .credentials.json which is gitignored
         res.json({
             eisProject: {
                 url: creds.eisProject?.url || '',
+                apiKey: creds.eisProject?.apiKey || '',
                 modelId: creds.eisProject?.modelId || '.elser-2-elastic'
             },
             mlNodeProject: {
                 url: creds.mlNodeProject?.url || '',
+                apiKey: creds.mlNodeProject?.apiKey || '',
                 modelId: creds.mlNodeProject?.modelId || '.elser-2-elasticsearch'
             }
         });
@@ -68,6 +71,103 @@ app.get('/api/credentials', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// Verify ELSER models are deployed
+app.post('/api/verify-models', async (req, res) => {
+    try {
+        const { eisProject, mlNodeProject } = req.body;
+        
+        // Check EIS ELSER model
+        const eisModel = await checkElserModel(eisProject, '.elser-2-elastic');
+        
+        // Check ML Node ELSER model  
+        const mlNodeModel = await checkElserModel(mlNodeProject, '.elser-2-elasticsearch');
+        
+        res.json({
+            eisModel,
+            mlNodeModel
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+async function checkElserModel(project, expectedModelId) {
+    try {
+        const { Client } = await import('@elastic/elasticsearch');
+        const client = new Client({
+            node: project.url,
+            auth: {
+                apiKey: project.apiKey
+            }
+        });
+        
+        // For serverless, we'll try a simpler approach
+        // First try to create a test pipeline with the model
+        try {
+            const testPipelineName = `test-elser-${Date.now()}`;
+            
+            // Try to create a pipeline using the model
+            await client.ingest.putPipeline({
+                id: testPipelineName,
+                body: {
+                    description: `Test pipeline for ${expectedModelId}`,
+                    processors: [
+                        {
+                            inference: {
+                                model_id: expectedModelId,
+                                field_map: {
+                                    'text_field': 'text_field'
+                                }
+                            }
+                        }
+                    ]
+                }
+            });
+            
+            // If we got here, the model is available
+            // Clean up test pipeline
+            await client.ingest.deletePipeline({ id: testPipelineName });
+            
+            return {
+                available: true,
+                modelId: expectedModelId,
+                version: 'Available',
+                type: 'elser',
+                deployed: true
+            };
+            
+        } catch (pipelineError) {
+            // If pipeline creation failed, try a simpler check
+            console.log(`Pipeline test failed for ${expectedModelId}: ${pipelineError.message}`);
+            
+            // Try to just check if we can access the cluster
+            try {
+                const info = await client.info();
+                
+                // If we can access the cluster but not create pipeline, model might not be deployed
+                return {
+                    available: false,
+                    modelId: expectedModelId,
+                    error: `Model ${expectedModelId} may not be deployed. Pipeline creation failed: ${pipelineError.message}`
+                };
+            } catch (infoError) {
+                return {
+                    available: false,
+                    modelId: expectedModelId,
+                    error: `Cannot connect to cluster: ${infoError.message}`
+                };
+            }
+        }
+        
+    } catch (error) {
+        return {
+            available: false,
+            modelId: expectedModelId,
+            error: `Connection error: ${error.message}`
+        };
+    }
+}
 
 // Test connections to both projects
 app.post('/api/test-connection', async (req, res) => {
@@ -330,50 +430,58 @@ async function runTest(testId, testType, queries, params) {
                 sendOutput(`Load test completed: ${results.stats.totalQueries} queries, ${results.stats.actualQPS} QPS`, 'success');
                 break;
                 
-            case 'enrich':
-                sendOutput(`Starting ELSER enrichment test`, 'info');
+            case 'embed':
+                sendOutput(`Starting ELSER embedding test`, 'info');
+                sendOutput(`Models being used:`, 'info');
+                sendOutput(`  EIS: .elser-2-elastic`, 'info');
+                sendOutput(`  ML Node: .elser-2-elasticsearch`, 'info');
                 
-                const enrichTarget = params.enrichTarget || 'both';
+                const embedTarget = params.embedTarget || 'both';
                 const documentCount = params.documentCount || 100;
                 
                 tester = new ElserTester();
                 await tester.initialize();
                 
-                const enrichResults = [];
+                const embedResults = [];
                 
-                if (enrichTarget === 'both' || enrichTarget === 'eis') {
-                    sendOutput(`\nEnriching ${documentCount} documents on EIS with .elser-2-elastic...`, 'info');
-                    const eisResult = await tester.enrichDocuments(true, documentCount);
-                    enrichResults.push(eisResult);
+                if (embedTarget === 'both' || embedTarget === 'eis') {
+                    sendOutput(`\nCreating ELSER embeddings for ${documentCount} documents on EIS...`, 'info');
+                    sendOutput(`Using model: .elser-2-elastic`, 'info');
+                    const eisResult = await tester.embedDocuments(true, documentCount);
+                    embedResults.push(eisResult);
                     
                     if (eisResult.success) {
-                        sendOutput(`✓ EIS enrichment completed in ${eisResult.duration}ms`, 'success');
-                        sendOutput(`  Documents processed: ${eisResult.documentsProcessed}`, 'info');
+                        sendOutput(`✓ EIS embedding completed in ${eisResult.duration}ms`, 'success');
+                        sendOutput(`  Documents embedded: ${eisResult.documentsProcessed}`, 'info');
+                        sendOutput(`  Model used: .elser-2-elastic`, 'success');
                     } else {
-                        sendOutput(`✗ EIS enrichment failed: ${eisResult.error}`, 'error');
+                        sendOutput(`✗ EIS embedding failed: ${eisResult.error}`, 'error');
                     }
                 }
                 
-                if (enrichTarget === 'both' || enrichTarget === 'mlnode') {
-                    sendOutput(`\nEnriching ${documentCount} documents on ML Node with .elser-2-elasticsearch...`, 'info');
-                    const mlResult = await tester.enrichDocuments(false, documentCount);
-                    enrichResults.push(mlResult);
+                if (embedTarget === 'both' || embedTarget === 'mlnode') {
+                    sendOutput(`\nCreating ELSER embeddings for ${documentCount} documents on ML Node...`, 'info');
+                    sendOutput(`Using model: .elser-2-elasticsearch`, 'info');
+                    const mlResult = await tester.embedDocuments(false, documentCount);
+                    embedResults.push(mlResult);
                     
                     if (mlResult.success) {
-                        sendOutput(`✓ ML Node enrichment completed in ${mlResult.duration}ms`, 'success');
-                        sendOutput(`  Documents processed: ${mlResult.documentsProcessed}`, 'info');
+                        sendOutput(`✓ ML Node embedding completed in ${mlResult.duration}ms`, 'success');
+                        sendOutput(`  Documents embedded: ${mlResult.documentsProcessed}`, 'info');
+                        sendOutput(`  Model used: .elser-2-elasticsearch`, 'success');
                     } else {
-                        sendOutput(`✗ ML Node enrichment failed: ${mlResult.error}`, 'error');
+                        sendOutput(`✗ ML Node embedding failed: ${mlResult.error}`, 'error');
                     }
                 }
                 
                 // Send metrics for display
-                const successfulResults = enrichResults.filter(r => r.success);
+                const successfulResults = embedResults.filter(r => r.success);
                 if (successfulResults.length > 0) {
                     const metrics = {};
                     successfulResults.forEach(r => {
                         metrics[`${r.projectType} Time`] = `${r.duration}ms`;
                         metrics[`${r.projectType} Docs`] = r.documentsProcessed;
+                        metrics[`${r.projectType} Model`] = r.projectType === 'EIS' ? '.elser-2-elastic' : '.elser-2-elasticsearch';
                     });
                     
                     if (successfulResults.length === 2) {
@@ -387,7 +495,11 @@ async function runTest(testId, testType, queries, params) {
                     broadcast({ type: 'metrics', metrics });
                 }
                 
-                sendOutput(`\nEnrichment test completed. You can now run search tests with ELSER embeddings.`, 'success');
+                sendOutput(`\n=== ELSER Embedding Test Completed ===`, 'success');
+                sendOutput(`Models used:`, 'info');
+                sendOutput(`  • EIS: .elser-2-elastic`, 'info');
+                sendOutput(`  • ML Node: .elser-2-elasticsearch`, 'info');
+                sendOutput(`You can now run search tests using ELSER semantic search.`, 'success');
                 break;
                 
             case 'stress':

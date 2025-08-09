@@ -29,25 +29,18 @@ export class ElserTester {
         // Pipeline doesn't exist, we'll create it
       }
 
-      // Create ELSER inference pipeline
-      // ELSER v2 uses specific field mappings
+      // Create ELSER inference pipeline - using the simpler working format from original project
       await client.ingest.putPipeline({
         id: pipelineName,
         body: {
-          description: `ELSER sparse embedding pipeline using ${modelId}`,
+          description: `ELSER inference pipeline using ${modelId}`,
           processors: [
             {
               inference: {
                 model_id: modelId,
-                target_field: 'ml',  // ELSER uses ml.tokens for sparse embeddings
-                field_map: {
-                  'text_entry': 'text_field'  // Map our text field to ELSER's expected input
-                },
-                inference_config: {
-                  // ELSER-specific configuration
-                  text_expansion: {
-                    results_field: 'tokens'  // This creates ml.tokens field with sparse vectors
-                  }
+                input_output: {
+                  input_field: 'text_entry',
+                  output_field: 'text_embedding'
                 }
               }
             }
@@ -55,8 +48,8 @@ export class ElserTester {
           on_failure: [
             {
               set: {
-                field: '_index',
-                value: 'failed-{{{_index}}}'
+                field: 'error_message',
+                value: '{{_ingest.on_failure_message}}'
               }
             }
           ]
@@ -66,30 +59,7 @@ export class ElserTester {
       console.log(chalk.green(`Created ELSER pipeline ${pipelineName}`));
     } catch (error) {
       console.error(chalk.red(`Error creating pipeline ${pipelineName}:`), error.message);
-      
-      // Try a simpler pipeline configuration as fallback
-      try {
-        await client.ingest.putPipeline({
-          id: pipelineName,
-          body: {
-            description: `ELSER inference pipeline using ${modelId}`,
-            processors: [
-              {
-                inference: {
-                  model_id: modelId,
-                  field_map: {
-                    'text_entry': 'text_field'
-                  }
-                }
-              }
-            ]
-          }
-        });
-        console.log(chalk.yellow(`Created simplified pipeline ${pipelineName}`));
-      } catch (fallbackError) {
-        console.error(chalk.red(`Fallback pipeline also failed:`), fallbackError.message);
-        throw fallbackError;
-      }
+      throw error;
     }
   }
 
@@ -97,17 +67,15 @@ export class ElserTester {
     const startTime = Date.now();
     
     try {
-      // First, we need to ensure the index has ELSER embeddings
-      // For search, we use the _inference API to generate embeddings on the fly
+      // Use sparse_vector query with ELSER (matching the working project)
       const response = await client.search({
-        index: `${INDEX_NAME}-enriched`, // Use the enriched index with ELSER embeddings
+        index: `${INDEX_NAME}-enriched`,
         body: {
           query: {
-            text_expansion: {
-              'ml.tokens': {  // ELSER stores embeddings in ml.tokens field
-                model_id: modelId,
-                model_text: query
-              }
+            sparse_vector: {
+              field: 'text_embedding',
+              inference_id: modelId,
+              query: query
             }
           },
           size: 10,
@@ -235,13 +203,13 @@ export class ElserTester {
     return results;
   }
 
-  async enrichDocuments(useEis = true, documentCount = null) {
+  async embedDocuments(useEis = true, documentCount = null) {
     const client = useEis ? this.eisClient : this.mlNodeClient;
     const modelId = useEis ? this.eisModelId : this.mlNodeModelId;
     const projectType = useEis ? 'EIS' : 'ML Node';
     const pipelineName = `elser-${projectType.toLowerCase().replace(' ', '-')}-pipeline`;
 
-    console.log(chalk.cyan(`\nEnriching documents on ${projectType} with ${modelId}\n`));
+    console.log(chalk.cyan(`\nCreating ELSER embeddings on ${projectType} with model: ${modelId}\n`));
 
     try {
       // First, ensure the ELSER model is deployed
@@ -263,7 +231,7 @@ export class ElserTester {
         // Index doesn't exist, that's fine
       }
 
-      // Create the enriched index with proper mappings for ELSER
+      // Create the enriched index with proper mappings for ELSER (using sparse_vector like the working project)
       await client.indices.create({
         index: `${INDEX_NAME}-enriched`,
         body: {
@@ -275,19 +243,15 @@ export class ElserTester {
               line_number: { type: 'keyword' },
               speaker: { type: 'keyword' },
               text_entry: { type: 'text' },
-              ml: {
-                properties: {
-                  tokens: { type: 'rank_features' }  // This is where ELSER stores sparse embeddings
-                }
-              }
+              text_embedding: { type: 'sparse_vector' }  // ELSER sparse embeddings field
             }
           }
         }
       });
 
-      console.log(chalk.blue(`Created enriched index with ELSER mappings`));
+      console.log(chalk.blue(`Created index with ELSER mappings for sparse embeddings`));
 
-      // Reindex with pipeline
+      // Reindex with pipeline to create embeddings
       const startTime = Date.now();
       
       const reindexBody = {
@@ -305,20 +269,22 @@ export class ElserTester {
         reindexBody.source.size = documentCount;
       }
 
+      console.log(chalk.blue(`Starting embedding process with model ${modelId}...`));
       const reindexResult = await client.reindex({
         wait_for_completion: true,
         body: reindexBody
       });
 
       const duration = Date.now() - startTime;
-      console.log(chalk.green(`✓ Enrichment completed in ${duration}ms on ${projectType}`));
+      console.log(chalk.green(`✓ ELSER embedding completed in ${duration}ms on ${projectType}`));
+      console.log(chalk.blue(`  Model used: ${modelId}`));
       console.log(chalk.blue(`  Documents processed: ${reindexResult.total}`));
-      console.log(chalk.blue(`  Documents created: ${reindexResult.created}`));
+      console.log(chalk.blue(`  Documents with embeddings: ${reindexResult.created}`));
 
       // Try to get document count
       try {
         const count = await client.count({ index: `${INDEX_NAME}-enriched` });
-        console.log(chalk.blue(`  Total documents in enriched index: ${count.count}`));
+        console.log(chalk.blue(`  Total documents in embedded index: ${count.count}`));
       } catch (e) {
         // Count might not work on serverless
       }
@@ -327,12 +293,13 @@ export class ElserTester {
         success: true, 
         duration, 
         projectType,
+        modelId,
         documentsProcessed: reindexResult.total,
         documentsCreated: reindexResult.created
       };
     } catch (error) {
-      console.error(chalk.red(`Error enriching documents on ${projectType}:`), error.message);
-      return { success: false, error: error.message, projectType };
+      console.error(chalk.red(`Error creating ELSER embeddings on ${projectType} with ${modelId}:`), error.message);
+      return { success: false, error: error.message, projectType, modelId };
     }
   }
 }

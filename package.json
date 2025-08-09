@@ -9,7 +9,8 @@
     "test": "node src/index.js --test",
     "setup": "node src/setup-shakespeare.js",
     "server": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "simple": "node server-simple.js"
   },
   "keywords": [
     "elasticsearch",
