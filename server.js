@@ -69,6 +69,50 @@ app.get('/api/credentials', async (req, res) => {
     }
 });
 
+// Test connections to both projects
+app.post('/api/test-connection', async (req, res) => {
+    try {
+        const { eisProject, mlNodeProject } = req.body;
+        
+        // Test EIS connection
+        const eisConnection = await testProjectConnection(eisProject);
+        
+        // Test ML Node connection
+        const mlNodeConnection = await testProjectConnection(mlNodeProject);
+        
+        res.json({
+            eisConnection,
+            mlNodeConnection
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+async function testProjectConnection(project) {
+    try {
+        const { Client } = await import('@elastic/elasticsearch');
+        const client = new Client({
+            node: project.url,
+            auth: {
+                apiKey: project.apiKey
+            }
+        });
+        
+        const info = await client.info();
+        return {
+            success: true,
+            cluster: info.name,
+            version: info.version.number
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 // Setup Shakespeare index
 app.post('/api/setup', async (req, res) => {
     try {

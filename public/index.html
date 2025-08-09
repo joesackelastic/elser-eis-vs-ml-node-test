@@ -349,9 +349,10 @@
                             </div>
                         </div>
                     </div>
+                    <button onclick="testConnections()" style="width: 100%; margin-top: 10px;">Test Connections</button>
                     <div class="connection-status">
-                        <div class="connection-badge disconnected" id="eisStatus">EIS: Not Connected</div>
-                        <div class="connection-badge disconnected" id="mlNodeStatus">ML Node: Not Connected</div>
+                        <div class="connection-badge disconnected" id="eisStatus">EIS: Not Tested</div>
+                        <div class="connection-badge disconnected" id="mlNodeStatus">ML Node: Not Tested</div>
                     </div>
                 </div>
 
@@ -605,6 +606,58 @@ night</textarea>
             }
             paramsDiv.innerHTML = html;
         });
+
+        async function testConnections() {
+            if (!validateCredentials()) {
+                alert('Please enter all credentials');
+                return;
+            }
+
+            const eisStatus = document.getElementById('eisStatus');
+            const mlNodeStatus = document.getElementById('mlNodeStatus');
+            
+            eisStatus.textContent = 'EIS: Testing...';
+            eisStatus.className = 'connection-badge disconnected';
+            mlNodeStatus.textContent = 'ML Node: Testing...';
+            mlNodeStatus.className = 'connection-badge disconnected';
+            
+            try {
+                const response = await fetch('/api/test-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(getCredentials())
+                });
+                
+                const result = await response.json();
+                
+                // Update EIS status
+                if (result.eisConnection.success) {
+                    eisStatus.textContent = 'EIS: Connected';
+                    eisStatus.className = 'connection-badge connected';
+                    appendResult(`EIS connection successful (${result.eisConnection.cluster})`, 'success');
+                } else {
+                    eisStatus.textContent = 'EIS: Failed';
+                    eisStatus.className = 'connection-badge disconnected';
+                    appendResult(`EIS connection failed: ${result.eisConnection.error}`, 'error');
+                }
+                
+                // Update ML Node status
+                if (result.mlNodeConnection.success) {
+                    mlNodeStatus.textContent = 'ML Node: Connected';
+                    mlNodeStatus.className = 'connection-badge connected';
+                    appendResult(`ML Node connection successful (${result.mlNodeConnection.cluster})`, 'success');
+                } else {
+                    mlNodeStatus.textContent = 'ML Node: Failed';
+                    mlNodeStatus.className = 'connection-badge disconnected';
+                    appendResult(`ML Node connection failed: ${result.mlNodeConnection.error}`, 'error');
+                }
+                
+            } catch (error) {
+                eisStatus.textContent = 'EIS: Error';
+                mlNodeStatus.textContent = 'ML Node: Error';
+                appendResult(`Connection test error: ${error.message}`, 'error');
+            }
+        }
 
         async function setupIndex() {
             if (!validateCredentials()) {
