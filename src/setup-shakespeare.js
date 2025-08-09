@@ -10,12 +10,16 @@ async function setupIndex(client, projectName) {
   const spinner = ora(`Setting up Shakespeare index on ${projectName}`).start();
   
   try {
-    // Check if index exists
-    const exists = await client.indices.exists({ index: INDEX_NAME });
-    
-    if (exists) {
-      spinner.info(`Index '${INDEX_NAME}' already exists on ${projectName}, deleting...`);
-      await client.indices.delete({ index: INDEX_NAME });
+    // Check if index exists and delete if it does
+    try {
+      const exists = await client.indices.exists({ index: INDEX_NAME });
+      if (exists) {
+        spinner.info(`Index '${INDEX_NAME}' already exists on ${projectName}, deleting...`);
+        await client.indices.delete({ index: INDEX_NAME });
+      }
+    } catch (e) {
+      // Index might not exist, continue
+      spinner.text = `Creating index on ${projectName}...`;
     }
     
     // Create index with mappings
@@ -66,10 +70,14 @@ async function setupIndex(client, projectName) {
     
     spinner.succeed(`Successfully indexed ${shakespeareData.length} documents on ${projectName}`);
     
-    // Get index stats
-    const stats = await client.indices.stats({ index: INDEX_NAME });
-    const docCount = stats._all.primaries.docs.count;
-    console.log(chalk.green(`  Total documents in index: ${docCount}`));
+    // Try to get document count (may not work on all serverless deployments)
+    try {
+      const countResponse = await client.count({ index: INDEX_NAME });
+      console.log(chalk.green(`  Total documents in index: ${countResponse.count}`));
+    } catch (e) {
+      // Stats API might not be available on serverless, skip it
+      console.log(chalk.gray(`  Index created with ${shakespeareData.length} documents`));
+    }
     
   } catch (error) {
     spinner.fail(`Failed to setup index on ${projectName}`);
