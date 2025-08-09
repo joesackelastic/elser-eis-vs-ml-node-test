@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Environment and credentials
+.env
+.env.local
+.credentials.json
+
+# Test results
+results/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
