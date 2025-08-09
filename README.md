@@ -2,8 +2,23 @@
 
 A performance comparison tool for testing `.elser-2-elastic` (EIS) vs `.elser-2-elasticsearch` (ML Node) models on Elasticsearch serverless projects using the Shakespeare dataset.
 
+## 🚀 Quick Start - Web Interface
+
+The easiest way to use this tool is through the web interface:
+
+```bash
+# Install dependencies
+npm install
+
+# Start the web server
+npm run server
+
+# Open your browser to http://localhost:3000
+```
+
 ## Features
 
+- **Web Interface**: User-friendly browser-based interface with real-time updates
 - **Dual Serverless Project Support**: Connect to two separate serverless projects simultaneously
 - **Shakespeare Dataset**: Built-in Shakespeare text corpus for consistent testing
 - **Multi-threaded Testing**: Concurrent query execution with configurable thread counts
@@ -14,6 +29,7 @@ A performance comparison tool for testing `.elser-2-elastic` (EIS) vs `.elser-2-
   - Multi-threaded concurrent testing
   - Load testing with sustained traffic
   - Stress testing to find breaking points
+- **Real-time Updates**: WebSocket-based live test progress and results
 - **Secure Credential Management**: Local credential caching (never committed to git)
 - **Detailed Reporting**: Console tables, JSON exports, and HTML reports
 
@@ -46,6 +62,30 @@ npm run start setup
 ```
 
 ## Usage
+
+### Web Interface (Recommended)
+
+1. Start the server:
+```bash
+npm run server
+```
+
+2. Open your browser to `http://localhost:3000`
+
+3. Enter your serverless project credentials in the web interface
+
+4. Click "Setup Index" to initialize the Shakespeare dataset
+
+5. Select a test type and configure parameters
+
+6. Click "Start Test" to begin testing
+
+The web interface provides:
+- Real-time test progress and results
+- Visual metrics and comparisons
+- Easy test configuration
+- Live console output
+- Automatic credential saving (locally)
 
 ### Command Line Interface
 
